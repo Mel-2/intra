@@ -1,0 +1,107 @@
+---
+title: "Taux de change de la BRH"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(shiny)
+library(googlesheets4)
+library(plotly)
+library(dplyr)
+library(rvest)
+library(ggplot2)
+```
+```{r}
+# setting the url to fetch the from
+
+url <- "https://www.brh.ht/taux-du-jour/"
+
+# Get HTML data from the above URL
+brhHTMLdata <- read_html(url)
+
+# Getting the data into a dataframe
+data1 <- brhHTMLdata %>% html_nodes("table.table") %>% .[[1]] %>% html_table
+
+# setting the url to fetch the from
+
+url2 <- "https://www.brh.ht/taux-affiches-par-les-banques-et-les-agents-de-change-2/"
+
+# Get HTML data from the above URL
+brhHTMLdata <- read_html(url2)
+
+# Getting the data into a dataframe
+brhData <- brhHTMLdata %>% html_nodes("table.table") %>% .[[1]] %>% html_table
+
+data1<-data1[-c(8),]
+data1<-data1[,-c(4)]
+data1<-data1[-c(8,10,11),]
+str(data1)
+
+brhData<-brhData[,-c(4)]
+d1<-slice(data1,c(2,4,7))
+d2<-slice(brhData,c(2,3,4,5,6,7,8,10))
+d3<-slice(brhData,c(2,3,4,5,6,7,8))
+d4<-slice(data1,c(3,5,6,8))
+d5<-slice(data1,c(10,12))
+numeric=c("X2", "X3")
+categorical=c("X1")
+
+```
+Column {.sidebar data-width=200}
+-----------------------------------------------------------------------
+```{r}
+selectInput("categorical", label = "choisir une Variable:", choices = categorical)
+
+selectInput("numeric", label = "choisir Variable:", choices = numeric)
+```
+Dans les diagrammes suivants nous avons represente l’evolution du taux de change dans les deux plus grands secteurs d’activites consideres par la BRH qui sont: Le secteur bancaire et le secteur informel. Ainsi que le vulume des transactions bancaires.
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+### Diagramme du taux par banque
+
+```{r}
+fig <- plot_ly(d3, labels = ~X1, values = ~X3, type = 'pie')
+fig <- fig %>% layout(title = 'variation par sequence',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Diagramme par secteur
+
+```{r}
+plot_ly(
+  data = d1,
+  x = ~X1,
+  y = ~X2,
+  type = "bar"
+)
+```
+
+### Niveau des transactions globales et moyennes
+
+```{r}
+renderPlotly({
+  plot_ly(d4,
+              x = ~d4[[input$numeric]],
+              color = ~d4[[input$categorical]],
+              colors = "Paired",
+              type = "box") %>%
+  layout(title = "",
+         xaxis = list(title = "" ,
+                      zeroline = FALSE))
+})
+```
+
+
